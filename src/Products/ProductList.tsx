@@ -18,7 +18,7 @@ import {useProducts} from "./useProducts";
 const log = getLogger('ProductList');
 
 const ProductList: React.FC = () => {
-    const {products, fetching,fetchingError, addProduct} = useProducts();
+    const { products, fetching, fetchingError, addProduct } = useProducts();
     log("ProductList render");
     return (
         <IonPage>
@@ -28,14 +28,14 @@ const ProductList: React.FC = () => {
                 </IonToolbar>
             </IonHeader>
             <IonContent>
-                <IonLoading isOpen={fetching} message="Fetching items" />
+                <IonLoading isOpen={fetching} message="Fetching products" />
                 {products && (
                     <IonList>
                         {products.map(({ id, name, price}) => <Product key={id} name={name} price={price}/>)}
                     </IonList>
                 )}
                 {fetchingError && (
-                    <div>{fetchingError.message || 'Failed to fetch items'}</div>
+                    <div>{fetchingError.message || 'Failed to fetch products'}</div>
                 )}
                 <IonFab vertical="bottom" horizontal="end" slot="fixed">
                     <IonFabButton onClick={addProduct}>
