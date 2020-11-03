@@ -45,6 +45,7 @@
     ]
   },
   "devDependencies": {
-    "@capacitor/cli": "2.4.2"
+    "@capacitor/cli": "2.4.2",
+    "axios": "^0.21.0"
   }
 }
