@@ -1,11 +1,17 @@
 import React from 'react';
 import {ProductProps} from "./ProductProps";
+import {IonItem, IonLabel} from "@ionic/react";
 
-const Product: React.FC<ProductProps> = ({ id, name, price }) => {
+interface ProductPropsExt extends ProductProps {
+    onEdit: (id?: string) => void;
+}
+
+const Product: React.FC<ProductPropsExt> = ({ id, name, price , onEdit}) => {
     return (
-        <div>
-            <div>{name} {price}</div>
-        </div>
+        <IonItem onClick={() => onEdit(id)}>
+            <IonLabel>{name}</IonLabel>
+            <IonLabel>{price}</IonLabel>
+        </IonItem>
     );
 };
 

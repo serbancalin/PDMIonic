@@ -5,17 +5,39 @@ import { ProductProps } from './ProductProps';
 const log = getLogger('ProductApi');
 
 const baseUrl = 'http://localhost:8080';
+const productUrl = `${baseUrl}/products`;
 
-export const getProducts: () => Promise<ProductProps[]> = () => {
-    log('getProducts - started');
-    return axios
-        .get(`${baseUrl}/products`)
+interface ResponseProps<T> {
+    data: T;
+}
+
+function withLogs<T>(promise: Promise<ResponseProps<T>>, fnName: string): Promise<T> {
+    log(`${fnName} - started`);
+    return promise
         .then(res => {
-            log('getProducts - succeeded');
+            log(`${fnName} - succeeded`);
             return Promise.resolve(res.data);
         })
         .catch(err => {
-            log('getProducts - failed');
+            log(`${fnName} - failed`);
             return Promise.reject(err);
         });
+}
+
+const config = {
+    headers: {
+        'Content-Type': 'application/json'
+    }
+};
+
+export const getProducts: () => Promise<ProductProps[]> = () => {
+    return withLogs(axios.get(productUrl, config), 'getProduct');
+}
+
+export const createProduct: (product: ProductProps) => Promise<ProductProps[]> = product => {
+    return withLogs(axios.post(productUrl, product, config), 'createProduct');
+}
+
+export const updateProduct: (product: ProductProps) => Promise<ProductProps[]> = product => {
+    return withLogs(axios.put(`${productUrl}/${product.id}`, product, config), 'updateProduct');
 }
