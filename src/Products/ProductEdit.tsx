@@ -31,7 +31,7 @@ const ProductEdit: React.FC<ProductEditProps> = ({ history, match }) => {
         log('useEffect');
         const routeId = match.params.id || '';
         log(`${routeId} - match-ul`);
-        const product = products?.find(product => String(product.id) === String(routeId));
+        const product = products?.find(product => String(product._id) === String(routeId));
         log(`${product} - match-ul`);
         setProduct(product);
         if (product) {

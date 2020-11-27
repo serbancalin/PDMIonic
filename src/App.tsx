@@ -21,21 +21,25 @@ import '@ionic/react/css/display.css';
 
 /* Theme variables */
 import './theme/variables.css';
-import {ProductEdit, ProductList} from "./Products";
 import {ProductProvider} from "./Products/ProductProvider";
+import {AuthProvider, Login, PrivateRoute} from "./auth";
+import {ProductEdit, ProductList} from "./Products";
 
 const App: React.FC = () => (
   <IonApp>
-      <ProductProvider>
-        <IonReactRouter>
-            <IonRouterOutlet>
-                <Route path="/products" component={ProductList} exact={true} />
-                <Route path="/product" component={ProductEdit} exact={true} />
-                <Route path="/product/:id" component={ProductEdit} exact={true} />
-                <Route exact path="/" render={() => <Redirect to="/products" />} />
-            </IonRouterOutlet>
-        </IonReactRouter>
-      </ProductProvider>
+    <IonReactRouter>
+      <IonRouterOutlet>
+        <AuthProvider>
+            <Route path="/login" component={Login} exact={true}/>
+            <ProductProvider>
+                <PrivateRoute path="/products" component={ProductList} exact={true} />
+                <PrivateRoute path="/product" component={ProductEdit} exact={true} />
+                <PrivateRoute path="/product/:id" component={ProductEdit} exact={true} />
+            </ProductProvider>
+            <Route exact path="/" render={() => <Redirect to="/products" />} />
+        </AuthProvider>
+      </IonRouterOutlet>
+    </IonReactRouter>
   </IonApp>
 );
 

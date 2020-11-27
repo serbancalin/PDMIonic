@@ -6,9 +6,9 @@ interface ProductPropsExt extends ProductProps {
     onEdit: (id?: string) => void;
 }
 
-const Product: React.FC<ProductPropsExt> = ({ id, name, price , onEdit}) => {
+const Product: React.FC<ProductPropsExt> = ({ _id, name, price , onEdit}) => {
     return (
-        <IonItem onClick={() => onEdit(id)}>
+        <IonItem onClick={() => onEdit(_id)}>
             <IonLabel>{name}</IonLabel>
             <IonLabel>{price}</IonLabel>
         </IonItem>
