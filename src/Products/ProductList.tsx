@@ -5,11 +5,11 @@ import {
     IonHeader,
     IonIcon, IonList,
     IonLoading,
-    IonPage,
+    IonPage, IonSearchbar,
     IonTitle,
     IonToolbar
 } from '@ionic/react';
-import React, {useContext} from 'react';
+import React, {useContext, useState} from 'react';
 import Product from './Product';
 import {getLogger} from "../core";
 import {add} from "ionicons/icons";
@@ -20,6 +20,7 @@ const log = getLogger('ProductList');
 
 const ProductList: React.FC<RouteComponentProps> = ({ history }) => {
     const { products, fetching, fetchingError } = useContext(ProductContext);
+    const [searchProduct, setSearchProduct] = useState<string>('');
     log("ProductList render");
     return (
         <IonPage>
@@ -29,10 +30,17 @@ const ProductList: React.FC<RouteComponentProps> = ({ history }) => {
                 </IonToolbar>
             </IonHeader>
             <IonContent>
+                <IonSearchbar
+                    value={searchProduct}
+                    debounce={1000}
+                    onIonChange={e => setSearchProduct(e.detail.value!)}>
+                </IonSearchbar>
                 <IonLoading isOpen={fetching} message="Fetching products" />
                 {products && (
                     <IonList>
-                        {products.map(({ _id, name, price}) =>
+                        {products
+                            .filter(product => product.name.indexOf(searchProduct) >= 0 || product.price.toString().indexOf(searchProduct) >= 0)
+                            .map(({ _id, name, price}) =>
                             <Product key={_id} _id={_id} name={name} price={price} onEdit = {id => history.push(`/product/${id}`)}/>)}
                         {log("ProductList render done")}
                     </IonList>
