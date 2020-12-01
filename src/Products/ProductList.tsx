@@ -1,4 +1,5 @@
 import {
+    IonButton,
     IonContent,
     IonFab,
     IonFabButton,
@@ -13,20 +14,28 @@ import React, {useContext, useState} from 'react';
 import Product from './Product';
 import {getLogger} from "../core";
 import {add} from "ionicons/icons";
-import {RouteComponentProps} from "react-router";
+import {Redirect, RouteComponentProps} from "react-router";
 import {ProductContext} from "./ProductProvider";
+import {AuthContext} from "../auth";
 
 const log = getLogger('ProductList');
 
 const ProductList: React.FC<RouteComponentProps> = ({ history }) => {
     const { products, fetching, fetchingError } = useContext(ProductContext);
     const [searchProduct, setSearchProduct] = useState<string>('');
+    const {token, logout} = useContext(AuthContext);
+
+    const handleLogout = () => {
+        logout?.();
+        return <Redirect to={{pathname: "/login"}}/>;
+    };
     log("ProductList render");
     return (
         <IonPage>
             <IonHeader>
                 <IonToolbar>
                     <IonTitle>Your products</IonTitle>
+                    <IonButton slot="end" onClick={handleLogout}>Logout</IonButton>
                 </IonToolbar>
             </IonHeader>
             <IonContent>
