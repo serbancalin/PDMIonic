@@ -16,6 +16,17 @@ export const updateProduct: (token: string, product: ProductProps) => Promise<Pr
     return withLogs(axios.put(`${productUrl}/${product._id}`, product, authConfig(token)), 'updateProduct');
 }
 
+export const getPagedProducts: (token: string,
+                             page: number,
+                             search?: string) => Promise<ProductProps[]> =
+    async (token: string, page: number, search?: string) => {
+        let url = `${productUrl}?page=${page}`;
+        if (search && search !== '') {
+            url += '&search=' + search;
+        }
+        return withLogs(axios.get(url, authConfig(token)), 'getPagedProducts')
+    };
+
 interface MessageData {
     type: string;
     payload: ProductProps;
