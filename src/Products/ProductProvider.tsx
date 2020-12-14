@@ -2,8 +2,10 @@ import {getLogger} from "../core";
 import {ProductProps} from "./ProductProps";
 import React, {useCallback, useContext, useEffect, useReducer, useState} from "react";
 import PropTypes from 'prop-types';
-import {createProduct, getPagedProducts, getProducts, newWebSocket, updateProduct} from "./ProductApi";
+import {createProduct, getPagedProducts, syncData, newWebSocket, updateProduct} from "./ProductApi";
 import {AuthContext} from "../auth";
+import {NetworkStatus, Plugins} from "@capacitor/core";
+const { Network } = Plugins;
 
 const log = getLogger('ProductProvider');
 
@@ -21,6 +23,8 @@ export interface ProductState {
     scrollDisabled: boolean,
     searchProduct: string,
     setSearchProduct?: Function
+    networkStatus: boolean,
+    conflictProducts?: ProductProps[];
 }
 
 interface ActionProps {
@@ -33,7 +37,8 @@ const initialState: ProductState = {
     saving: false,
     page: 0,
     scrollDisabled: false,
-    searchProduct: ''
+    searchProduct: '',
+    networkStatus: false,
 };
 
 const FETCH_PRODUCTS_STARTED = 'FETCH_PRODUCTS_STARTED';
@@ -51,21 +56,33 @@ const reducer: (state: ProductState, action: ActionProps) => ProductState =
                 return {...state, fetching: true, fetchingError: null};
             case FETCH_PRODUCTS_SUCCEEDED:
                 let tmp = state.products || []
-                return {...state, products: [...tmp, ...payload.products], fetching: false};
+                payload.products
+                    .forEach((item: ProductProps) => {
+                        const index = tmp.findIndex((it: ProductProps) => it._id === item._id);
+                        if (index === -1) {
+                            tmp.push(item);
+                        } else {
+                            tmp[index] = item;
+                        }
+                    });
+                console.log(`PAYLOAD ${payload.products}`)
+                return { ...state, products: tmp, fetching: false };
             case FETCH_PRODUCTS_FAILED:
                 return {...state, fetchingError: payload.error, fetching: false};
             case SAVE_PRODUCT_STARTED:
                 return {...state, savingError: null, saving: true};
             case SAVE_PRODUCT_SUCCEEDED:
                 const products = [...(state.products || [])];
+                console.log(`PAYLOAD - products ${payload.products}`)
                 const product = payload.product;
+                console.log(`PAYLOAD - product ${payload.product}`)
                 const index = products.findIndex(it => it._id === product._id);
                 if (index === -1) {
                     products.splice(0, 0, product);
                 } else {
                     products[index] = product;
                 }
-                return {...state, items: products, saving: false};
+                return {...state, products: products, saving: false};
             case SAVE_PRODUCT_FAILED:
                 return {...state, savingError: payload.error, saving: false};
             case RESET_PRODUCT:
@@ -88,14 +105,29 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({children}) => {
     const [page, setPage] = useState<number>(0);
     const [scrollDisabled, setScrollDisabled] = useState<boolean>(false)
 
+    const [networkStatus, setNetworkStatus] = useState(false)
     const [searchProduct, setSearchProduct] = useState<string>('');
 
-    useEffect(getProductEffect, [token, page, searchProduct]);
+    const [conflictProducts, setConflictProducts] = useState<ProductProps[]>([]);
+    useEffect(networkEffect, [token])
+    useEffect(getProductEffect, [token, page, searchProduct, networkStatus])
     useEffect(resetProducts, [token, searchProduct])
-    useEffect(wsEffect, [token]);
+    useEffect(wsEffect, [token, networkStatus])
 
-    const saveProduct = useCallback<SaveProductFn>(saveProductCallback, [token]);
-    const value = {products, fetching, fetchingError, saving, savingError, saveProduct, page, searchProduct, setSearchProduct, setPage, scrollDisabled};
+    const saveProduct = useCallback<SaveProductFn>(saveProductCallback, [token, page, networkStatus]);
+    const value = { products,
+        fetching,
+        fetchingError,
+        page,
+        searchProduct,
+        setSearchProduct,
+        setPage,
+        scrollDisabled,
+        saving,
+        savingError,
+        saveProduct,
+        networkStatus,
+        conflictProducts};
     log('returns');
     return (
         <ProductContext.Provider value={value}>
@@ -103,9 +135,33 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({children}) => {
         </ProductContext.Provider>
     );
 
+    function networkEffect() {
+        const handler = Network.addListener('networkStatusChange', handleNetworkStatusChange);
+        Network.getStatus().then(handleNetworkStatusChange);
+        let canceled = false;
+        return () => {
+            canceled = true;
+            handler.remove();
+        }
+        async function handleNetworkStatusChange(status: NetworkStatus) {
+            console.log('useNetwork - status change', status);
+            if (!canceled) {
+                if(status.connected === true ){
+                    const conflicts = await syncData(token);
+                    setConflictProducts(conflicts);
+                    setNetworkStatus(true);
+                }
+                else {
+                    setNetworkStatus(false);
+                }
+            }
+        }
+
+    }
+
     function getProductEffect() {
         let canceled = false;
-        fetchProducts();
+        fetchProducts().then();
         return () => {
             canceled = true;
         }
@@ -117,7 +173,7 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({children}) => {
             try {
                 log('fetchProducts started');
                 dispatch({type: FETCH_PRODUCTS_STARTED});
-                const products = await getPagedProducts(token, page, searchProduct);
+                const products = await getPagedProducts(token, page, networkStatus, searchProduct);
                 log('fetchProducts succeeded');
                 setScrollDisabled(false)
                 if (!canceled) {
@@ -139,8 +195,9 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({children}) => {
     async function saveProductCallback(product: ProductProps) {
         try {
             log('saveProduct started');
+            log(`saveNote network status sent is ${networkStatus}`)
             dispatch({type: SAVE_PRODUCT_STARTED});
-            const savedProduct = await (product._id ? updateProduct(token, product) : createProduct(token, product));
+            const savedProduct = await (product._id ? updateProduct(token, product, networkStatus) : createProduct(token, product, networkStatus));
             log('saveProduct succeeded');
             dispatch({type: SAVE_PRODUCT_SUCCEEDED, payload: {product: savedProduct}});
         } catch (error) {
@@ -150,6 +207,9 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({children}) => {
     }
 
     function wsEffect() {
+        if (!networkStatus || token === '') {
+            return;
+        }
         let canceled = false;
         log('wsEffect - connecting');
         let closeWebSocket: () => void;
@@ -161,7 +221,7 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({children}) => {
                 const {type, payload: product} = message;
                 log(`ws message, item ${type}`);
                 if (type === 'created' || type === 'updated') {
-                    dispatch({type: SAVE_PRODUCT_SUCCEEDED, payload: {product}});
+                    dispatch({type: SAVE_PRODUCT_SUCCEEDED, payload: {product: product}});
                 }
             });
         }

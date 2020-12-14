@@ -1,12 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { getLogger } from '../core';
+import { getLogger, noop } from '../core';
 import { login as loginApi } from './authApi';
+import {LocalStorage} from "../core/Storage";
 
 const log = getLogger('AuthProvider');
 
 type LoginFn = (username?: string, password?: string) => void;
 type LogoutFn = () => void;
+
+export class AppConstants {
+  static readonly TOKEN = 'token';
+}
 
 export interface AuthState {
   authenticationError: Error | null;
@@ -35,6 +40,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  useEffect(getInitialStateEffect, []);
   const [state, setState] = useState<AuthState>(initialState);
   const { isAuthenticated, isAuthenticating, authenticationError, pendingAuthentication, token } = state;
   const login = useCallback<LoginFn>(loginCallback, []);
@@ -60,6 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   function logoutCallback(): void {
     log("logout");
+    LocalStorage.clear().then();
     setState({
       ...state,
       isAuthenticated: false,
@@ -67,8 +74,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   }
 
+  function getInitialStateEffect() {
+    let canceled = false;
+    LocalStorage.get(AppConstants.TOKEN)
+        .then(token =>
+            token && !canceled
+                ? setState({
+                  ...state,
+                  token,
+                  pendingAuthentication: false,
+                  isAuthenticated: true,
+                  authenticationError: null,
+                  isAuthenticating: false,
+                })
+                : noop());
+    return () => {
+      canceled = true;
+    };
+  }
+
   function authenticationEffect() {
     let canceled = false;
+    authenticate().then();
     authenticate();
     return () => {
       canceled = true;
@@ -91,6 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
         log('authenticate succeeded');
+        await LocalStorage.set(AppConstants.TOKEN, token);
         setState({
           ...state,
           token,

@@ -34,3 +34,10 @@ export const authConfig = (token?: string) => ({
         Authorization: `Bearer ${token}`,
     }
 });
+
+export class AppConstants {
+    static readonly TOKEN = 'token';
+    static readonly PRODUCTS = 'products';
+}
+export const noop = () => {
+}

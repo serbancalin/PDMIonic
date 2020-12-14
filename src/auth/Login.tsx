@@ -17,7 +17,7 @@ export const Login: React.FC<RouteComponentProps> = ({ history }) => {
   const [state, setState] = useState<LoginState>({});
   const { username, password } = state;
   const handleLogin = () => {
-    log('handleLogin...');
+    log('handleLogin...', login);
     login?.(username, password);
   };
   log('render');

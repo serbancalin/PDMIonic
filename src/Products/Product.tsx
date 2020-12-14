@@ -1,18 +1,19 @@
 import React from 'react';
+import {IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCardSubtitle} from '@ionic/react'
 import {ProductProps} from "./ProductProps";
-import {IonItem, IonLabel} from "@ionic/react";
 
-interface ProductPropsExt extends ProductProps {
-    onEdit: (id?: string) => void;
-}
-
-const Product: React.FC<ProductPropsExt> = ({ _id, name, price , onEdit}) => {
+const Product: React.FC<{product: ProductProps, onEdit: (_id?: string) => void}> = ({product, onEdit}) => {
     return (
-        <IonItem onClick={() => onEdit(_id)}>
-            <IonLabel>{name}</IonLabel>
-            <IonLabel>{price}</IonLabel>
-        </IonItem>
-    );
+        <IonCard button={true} onClick={() => onEdit(product._id)}>
+            <IonCardHeader>
+                <IonCardSubtitle>Last modified: {new Date(product.date).toDateString()}</IonCardSubtitle>
+                <IonCardTitle>{product.name}</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+                {product.price}
+            </IonCardContent>
+        </IonCard>
+    )
 };
 
 export default Product;

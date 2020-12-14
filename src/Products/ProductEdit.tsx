@@ -1,9 +1,10 @@
 import {getLogger} from "../core";
 import {RouteComponentProps} from "react-router";
-import {useContext, useEffect, useState} from "react";
+import React, {useContext, useEffect, useState} from "react";
 import {ProductContext} from "./ProductProvider";
 import {ProductProps} from "./ProductProps";
 import {
+    IonBackButton,
     IonButton,
     IonButtons,
     IonContent,
@@ -11,10 +12,9 @@ import {
     IonInput,
     IonLoading,
     IonPage,
-    IonTitle,
+    IonTitle, IonToast,
     IonToolbar
 } from "@ionic/react";
-import React from "react";
 
 const log = getLogger('ProductEdit');
 
@@ -23,10 +23,12 @@ interface ProductEditProps extends RouteComponentProps<{
 }> {}
 
 const ProductEdit: React.FC<ProductEditProps> = ({ history, match }) => {
-    const { products, saving, savingError, saveProduct } = useContext(ProductContext);
+    const { products, saving, savingError, saveProduct, networkStatus } = useContext(ProductContext);
     const [name, setName] = useState('New product');
-    const [price, setPrice] = useState(0);
-    const [product, setProduct] = useState<ProductProps>();
+    const [price, setPrice] = useState(0.0);
+    const [product, setProduct] = useState<ProductProps>()
+    const [date, setDate] = useState(new Date());
+    const [showSaveToast, setShowSaveToast] = useState(false);
     useEffect(() => {
         log('useEffect');
         const routeId = match.params.id || '';
@@ -37,18 +39,24 @@ const ProductEdit: React.FC<ProductEditProps> = ({ history, match }) => {
         if (product) {
             setName(product.name);
             setPrice(product.price);
+            setDate(product.date);
         }
     }, [match.params.id, products]);
     const handleSave = () => {
-        const editedProduct = product ? { ...product, name, price } : { name, price };
-        saveProduct && saveProduct(editedProduct).then(() => history.goBack());
-    };
+        const editedProduct = product ? { ...product, name, price, date: new Date() } : { name, price, date: new Date(), version: 0, lastModified: new Date() };
+        saveProduct && saveProduct(editedProduct).then(() => {
+            setShowSaveToast(true)
+        });
+    }
     log('render');
     return (
         <IonPage>
             <IonHeader>
                 <IonToolbar>
-                    <IonTitle>Edit</IonTitle>
+                    <IonButtons slot="start">
+                        <IonBackButton/>
+                    </IonButtons>
+                    <IonTitle>Edit - {networkStatus ? "online" : "offline"}</IonTitle>
                     <IonButtons slot="end">
                         <IonButton onClick={handleSave}>
                             Save
@@ -63,6 +71,13 @@ const ProductEdit: React.FC<ProductEditProps> = ({ history, match }) => {
                 {savingError && (
                     <div>{savingError.message || 'Failed to save product'}</div>
                 )}
+                <IonToast
+                position="bottom"
+                isOpen={showSaveToast}
+                onDidDismiss={() => setShowSaveToast(false)}
+                message={`${networkStatus ? "Product was saved on the server." : "~ LOCAL CHANGE SAVED ~"}`}
+                duration={2000}
+                />
             </IonContent>
         </IonPage>
     );

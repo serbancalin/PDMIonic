@@ -24,6 +24,7 @@ import './theme/variables.css';
 import {ProductProvider} from "./Products/ProductProvider";
 import {AuthProvider, Login, PrivateRoute} from "./auth";
 import {ProductEdit, ProductList} from "./Products";
+import ProductConflict from "./Products/ProductConflict";
 
 const App: React.FC = () => (
   <IonApp>
@@ -35,6 +36,7 @@ const App: React.FC = () => (
                 <PrivateRoute path="/products" component={ProductList} exact={true} />
                 <PrivateRoute path="/product" component={ProductEdit} exact={true} />
                 <PrivateRoute path="/product/:id" component={ProductEdit} exact={true} />
+                <PrivateRoute path="/products/conflict" component={ProductConflict} exact={true}/>
             </ProductProvider>
             <Route exact path="/" render={() => <Redirect to="/products" />} />
         </AuthProvider>
