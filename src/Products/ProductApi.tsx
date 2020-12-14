@@ -20,7 +20,7 @@ export const syncData: (token: string) => Promise<ProductProps[]> = async (token
 export const createProduct: (token: string, product: ProductProps, isNetworkAvailable: boolean) => Promise<ProductProps> = (token, product, isNetworkAvailable) => {
     if(isNetworkAvailable){
         console.log("API create sunt online")
-        axios.post(productUrl, product, authConfig(token)).then(
+        return axios.post(productUrl, product, authConfig(token)).then(
             response => {
                 saveProductLocal(response.data).then();
                 return response.data;
